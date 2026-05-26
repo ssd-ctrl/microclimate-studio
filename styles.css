@@ -139,6 +139,36 @@ button:disabled {
   border-color: #8ebf9f;
 }
 
+.illustrative-sheet {
+  margin-top: 0.6rem;
+  border: 1px solid #d9cfbf;
+  border-radius: 0.55rem;
+  overflow: hidden;
+  background: #f8f5ea;
+}
+
+.sheet-head {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #ece6d5;
+  border-bottom: 1px solid #d9cfbf;
+}
+
+.illustrative-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.sheet-notes {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.78rem;
+  color: #4f574d;
+  border-top: 1px solid #d9cfbf;
+}
+
 #map {
   height: 100vh;
   width: 100%;
@@ -195,6 +225,12 @@ button:disabled {
 
 .sun-study input {
   width: 160px;
+}
+
+.sun-study select {
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.35rem;
+  border: 1px solid #a8b5a8;
 }
 
 #three-d-canvas {

@@ -1,5 +1,6 @@
 ﻿import { getEnvironmentalProfile } from "./environment.js";
 import { generateLayout } from "./generator.js";
+import { renderIllustrativePlan } from "./illustrative-view.js";
 import { closeThreeDView, openThreeDView, setNavigationMode, setSunHour, toggleSunPlayback } from "./three-view.js";
 
 const osmLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -182,14 +183,17 @@ function renderResults(site, env, layout) {
   const tabContent =
     activeResultTab === "sun"
       ? `<p><strong>Sun Study Analysis</strong></p><ul>${sunDetails.map((s) => `<li>${s}</li>`).join("")}</ul><button type="button" id="open-3d-inline">Open 3D Walkthrough</button>`
-      : activeResultTab === "climate"
-        ? `<p><strong>Detailed Climate Profile</strong></p><ul>${climateDetails.map((item) => `<li>${item}</li>`).join("")}</ul>`
-        : `<p>${env.sun.designHint}</p><p><strong>Program Areas:</strong></p><p>Vegetation: ${layout.metrics.vegetatedAreaM2} m2</p><p>Hardscape: ${layout.metrics.hardscapeAreaM2} m2</p><p>Drainage: ${layout.metrics.drainageAreaM2} m2</p><p><strong>Recommendations:</strong></p><ul>${layout.recommendations.map((r) => `<li>${r}</li>`).join("")}</ul>`;
+      : activeResultTab === "illustrative"
+        ? renderIllustrativePlan(currentRun || { site, layout })
+        : activeResultTab === "climate"
+          ? `<p><strong>Detailed Climate Profile</strong></p><ul>${climateDetails.map((item) => `<li>${item}</li>`).join("")}</ul>`
+          : `<p>${env.sun.designHint}</p><p><strong>Program Areas:</strong></p><p>Vegetation: ${layout.metrics.vegetatedAreaM2} m2</p><p>Hardscape: ${layout.metrics.hardscapeAreaM2} m2</p><p>Drainage: ${layout.metrics.drainageAreaM2} m2</p><p><strong>Recommendations:</strong></p><ul>${layout.recommendations.map((r) => `<li>${r}</li>`).join("")}</ul>`;
 
   results.innerHTML = `
     <h2>${site.siteName || "Generated Site Concept"}</h2>
     <div class="result-tabs">
       <button type="button" class="tab-btn ${activeResultTab === "layout" ? "active" : ""}" data-tab="layout">Layout</button>
+      <button type="button" class="tab-btn ${activeResultTab === "illustrative" ? "active" : ""}" data-tab="illustrative">Illustrative</button>
       <button type="button" class="tab-btn ${activeResultTab === "sun" ? "active" : ""}" data-tab="sun">Sun Study</button>
       <button type="button" class="tab-btn ${activeResultTab === "climate" ? "active" : ""}" data-tab="climate">Climate</button>
     </div>

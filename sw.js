@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "microclimate-studio-v8";
+﻿const CACHE_NAME = "microclimate-studio-v9";
 const APP_ASSETS = [
   "./",
   "./index.html",
