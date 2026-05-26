@@ -41,10 +41,7 @@ function createFlowLinesForBoundary(boundary, drainageBoundary, downslope, slope
     const end =
       index < drainageBoundary.length ? drainageBoundary[index] : [lat + dLat * length, lng + dLng * length];
     return {
-      path: [
-        [lat, lng],
-        end
-      ],
+      path: [[lat, lng], end],
       strength: slopeFactor
     };
   });
@@ -89,31 +86,57 @@ function createBoundaryZones(site, vegetatedPct, hardscapePct, drainagePct) {
 
   return {
     zones: [
-      {
-        kind: "vegetation",
-        polygon: buildRingPolygon(outer, hardscapeBoundary),
-        color: "#4f9f6e"
-      },
-      {
-        kind: "hardscape",
-        polygon: buildRingPolygon(hardscapeBoundary, drainageBoundary),
-        color: "#8f8a77"
-      },
-      {
-        kind: "drainage",
-        polygon: drainageBoundary,
-        color: "#4e7da8"
-      }
+      { kind: "vegetation", polygon: buildRingPolygon(outer, hardscapeBoundary), color: "#4f9f6e" },
+      { kind: "hardscape", polygon: buildRingPolygon(hardscapeBoundary, drainageBoundary), color: "#8f8a77" },
+      { kind: "drainage", polygon: drainageBoundary, color: "#4e7da8" }
     ],
     flowLines: createFlowLinesForBoundary(outer, drainageBoundary, downslope, slopeFactor),
     drainageNote: `Drainage core shifted downslope (vector ${downslope[0].toFixed(2)}, ${downslope[1].toFixed(2)}).`
   };
 }
 
+function buildPlantSuggestions(site, env, zones) {
+  const palette = [
+    { species: "Live Oak", type: "canopy", waterNeed: "moderate" },
+    { species: "Mexican Feather Grass", type: "ornamental grass", waterNeed: "low" },
+    { species: "Switchgrass", type: "bioswale", waterNeed: "moderate" },
+    { species: "Red Yucca", type: "accent", waterNeed: "low" },
+    { species: "Serviceberry", type: "understory", waterNeed: "moderate" },
+    { species: "Inkberry", type: "evergreen shrub", waterNeed: "high" }
+  ];
+
+  const vegZone = zones.find((z) => z.kind === "vegetation");
+  const points = [];
+
+  if (vegZone?.polygon && vegZone.polygon.length > 6) {
+    for (let i = 0; i < vegZone.polygon.length; i += Math.ceil(vegZone.polygon.length / 6)) {
+      points.push(vegZone.polygon[i]);
+    }
+  } else if (vegZone?.center) {
+    points.push(vegZone.center, [vegZone.center[0] + 0.00025, vegZone.center[1] - 0.0002]);
+  }
+
+  if (!points.length) {
+    points.push([site.latitude + 0.0002, site.longitude - 0.0002]);
+  }
+
+  return points.map((point, index) => {
+    const base = palette[index % palette.length];
+    const drainageBias = env.soil.drainageClass.includes("slow") || env.rainfall.stormIntensity === "high";
+    const suited = drainageBias ? base.waterNeed !== "low" : true;
+    return {
+      name: base.species,
+      type: base.type,
+      waterNeed: base.waterNeed,
+      suited,
+      coords: point
+    };
+  });
+}
+
 export function generateLayout(site, env) {
   const radius = areaRadiusMeters(site.siteAreaM2);
-  const rainfallFactor =
-    env.rainfall.stormIntensity === "high" ? 1.25 : env.rainfall.stormIntensity === "moderate" ? 1 : 0.75;
+  const rainfallFactor = env.rainfall.stormIntensity === "high" ? 1.25 : env.rainfall.stormIntensity === "moderate" ? 1 : 0.75;
   const slopeFactor = site.slopePercent > 6 ? 1.25 : site.slopePercent > 2 ? 1 : 0.85;
 
   const vegetatedPct = Math.min(0.65, Math.max(0.35, 0.45 + (rainfallFactor - 1) * 0.12));
@@ -134,28 +157,15 @@ export function generateLayout(site, env) {
     boundaryRecommendation = `Parcel subdivision mode active. ${boundaryModel.drainageNote}`;
   } else {
     zones = [
-      {
-        kind: "vegetation",
-        center: [site.latitude + 0.0007, site.longitude - 0.0007],
-        radius: offset,
-        color: "#4f9f6e"
-      },
-      {
-        kind: "hardscape",
-        center: [site.latitude - 0.0006, site.longitude + 0.0003],
-        radius: offset * 0.8,
-        color: "#8f8a77"
-      },
-      {
-        kind: "drainage",
-        center: [site.latitude + 0.0003, site.longitude + 0.0007],
-        radius: offset * 0.55 * slopeFactor,
-        color: "#4e7da8"
-      }
+      { kind: "vegetation", center: [site.latitude + 0.0007, site.longitude - 0.0007], radius: offset, color: "#4f9f6e" },
+      { kind: "hardscape", center: [site.latitude - 0.0006, site.longitude + 0.0003], radius: offset * 0.8, color: "#8f8a77" },
+      { kind: "drainage", center: [site.latitude + 0.0003, site.longitude + 0.0007], radius: offset * 0.55 * slopeFactor, color: "#4e7da8" }
     ];
     flowLines = createFlowLinesForRadial(site, slopeFactor);
     boundaryRecommendation = "No boundary provided; zoning generated from radial site model.";
   }
+
+  const plantSuggestions = buildPlantSuggestions(site, env, zones);
 
   return {
     generatedAt: new Date().toISOString(),
@@ -171,6 +181,7 @@ export function generateLayout(site, env) {
       boundaryRecommendation
     ],
     zones,
-    flowLines
+    flowLines,
+    plantSuggestions
   };
 }

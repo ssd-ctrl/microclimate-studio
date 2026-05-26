@@ -2,10 +2,14 @@
   const absLat = Math.abs(latitude);
   const exposureBand = absLat < 23.5 ? "high" : absLat < 45 ? "moderate" : "low";
   const summerSolarGain = Math.max(4, 10 - absLat / 12).toFixed(1);
+  const summerNoonAltitude = Number((90 - Math.abs(latitude - 23.44)).toFixed(1));
+  const winterNoonAltitude = Number((90 - Math.abs(latitude + 23.44)).toFixed(1));
 
   return {
     exposureBand,
     summerSolarGainHours: Number(summerSolarGain),
+    summerNoonAltitudeDeg: summerNoonAltitude,
+    winterNoonAltitudeDeg: winterNoonAltitude,
     designHint:
       exposureBand === "high"
         ? "Prioritize shade canopy and evapotranspirative cooling."
@@ -46,6 +50,22 @@ function hardinessZoneFromMinTempC(minTempC) {
   return `USDA ${zone}`;
 }
 
+function deriveClimateStats(minSeries, maxSeries, annualRainMM) {
+  const avgMinC = minSeries.length ? minSeries.reduce((a, b) => a + b, 0) / minSeries.length : 10;
+  const avgMaxC = maxSeries.length ? maxSeries.reduce((a, b) => a + b, 0) / maxSeries.length : 24;
+  const frostDays = minSeries.filter((value) => value <= 0).length;
+  const heatDays = maxSeries.filter((value) => value >= 32).length;
+  const aridityIndex = Number((annualRainMM / Math.max(1, avgMaxC * 22)).toFixed(2));
+
+  return {
+    avgMinC: Number(avgMinC.toFixed(1)),
+    avgMaxC: Number(avgMaxC.toFixed(1)),
+    frostDays,
+    heatDays,
+    aridityIndex
+  };
+}
+
 async function fetchOpenMeteoClimate(latitude, longitude) {
   const url = new URL("https://archive-api.open-meteo.com/v1/archive");
   const now = new Date();
@@ -78,12 +98,14 @@ async function fetchOpenMeteoClimate(latitude, longitude) {
   const totalRainMM = daily.precipitation_sum.reduce((sum, value) => sum + (value || 0), 0);
   const annualRainMM = totalRainMM / 5;
   const minTempSeries = daily.temperature_2m_min.filter((value) => Number.isFinite(value));
+  const maxTempSeries = daily.temperature_2m_max.filter((value) => Number.isFinite(value));
   const annualExtremeMinC = minTempSeries.length > 0 ? Math.min(...minTempSeries) : -12;
 
   return {
     avgSunHours,
     annualRainMM,
-    annualExtremeMinC
+    annualExtremeMinC,
+    climateStats: deriveClimateStats(minTempSeries, maxTempSeries, annualRainMM)
   };
 }
 
@@ -131,11 +153,13 @@ async function fetchSoilGrids(latitude, longitude) {
 }
 
 export async function getEnvironmentalProfile({ latitude, longitude }) {
+  const fallbackRain = estimateRainfall(latitude, longitude);
   const fallback = {
     sun: estimateSunPath(latitude),
     soil: estimateSoilType(latitude, longitude),
-    rainfall: estimateRainfall(latitude, longitude),
+    rainfall: fallbackRain,
     hardinessZone: estimateHardinessZone(latitude),
+    climateStats: deriveClimateStats([], [], fallbackRain.annualMM),
     sources: ["fallback-estimators"]
   };
 
@@ -167,6 +191,7 @@ export async function getEnvironmentalProfile({ latitude, longitude }) {
       soil,
       rainfall,
       hardinessZone,
+      climateStats: climate.climateStats,
       sources
     };
   } catch (_error) {
