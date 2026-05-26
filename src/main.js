@@ -3,15 +3,15 @@ import { generateLayout } from "./generator.js";
 import { closeThreeDView, openThreeDView, setNavigationMode, setSunHour, toggleSunPlayback } from "./three-view.js";
 
 const osmLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 20,
+  maxZoom: 21,
   attribution: "&copy; OpenStreetMap contributors"
 });
 const imageryLayer = L.tileLayer(
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-  { maxZoom: 20, attribution: "Tiles &copy; Esri" }
+  { maxNativeZoom: 19, maxZoom: 21, attribution: "Tiles &copy; Esri" }
 );
 
-const map = L.map("map", { layers: [imageryLayer] }).setView([30.2672, -97.7431], 13);
+const map = L.map("map", { layers: [osmLayer] }).setView([30.2672, -97.7431], 13);
 
 const zoneLayer = L.layerGroup().addTo(map);
 const flowLayer = L.layerGroup().addTo(map);
@@ -21,11 +21,17 @@ const siteMarker = L.marker([30.2672, -97.7431]).addTo(map);
 
 L.control
   .layers(
-    { "Satellite View": imageryLayer, Streets: osmLayer },
+    { Streets: osmLayer, "Satellite View": imageryLayer },
     { "Design Zones": zoneLayer, "Drainage Flow": flowLayer, "Plant Suggestions": plantLayer },
     { collapsed: false }
   )
   .addTo(map);
+
+imageryLayer.on("tileerror", () => {
+  if (!map.hasLayer(osmLayer)) {
+    map.addLayer(osmLayer);
+  }
+});
 
 const form = document.getElementById("site-form");
 const results = document.getElementById("results");
@@ -56,7 +62,12 @@ async function geocodeLocation(query) {
   url.searchParams.set("format", "json");
   url.searchParams.set("limit", "1");
 
-  const response = await fetch(url, { headers: { Accept: "application/json" } });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  const response = await fetch(url, {
+    headers: { Accept: "application/json" },
+    signal: controller.signal
+  }).finally(() => clearTimeout(timeout));
   if (!response.ok) {
     throw new Error(`Location search failed (${response.status})`);
   }
