@@ -1,0 +1,163 @@
+﻿:root {
+  --bg: #f3f0e8;
+  --panel: #fff9ef;
+  --ink: #1c1f1a;
+  --muted: #5f6a5f;
+  --accent: #3c8456;
+  --accent-soft: #d5ead6;
+  --warn: #7d6b35;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 15% 15%, #fff4dd 0%, transparent 35%),
+    radial-gradient(circle at 85% 80%, #d3e9da 0%, transparent 28%),
+    var(--bg);
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+}
+
+.panel {
+  padding: 1.25rem;
+  background: var(--panel);
+  border-right: 1px solid #ded5c6;
+  overflow-y: auto;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.subhead {
+  margin: 0.4rem 0 1rem;
+  color: var(--muted);
+}
+
+form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid #c8bfaf;
+  border-radius: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  background: #fff;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 6.5rem;
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 0.8rem;
+}
+
+.row {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+.location-row {
+  grid-template-columns: 1fr auto;
+}
+
+button {
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+  padding: 0.75rem;
+  border-radius: 0.6rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(0.95);
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.export-row {
+  margin-top: 0.75rem;
+}
+
+.results {
+  margin-top: 1rem;
+  background: #fff;
+  border: 1px solid #ddd0be;
+  border-radius: 0.7rem;
+  padding: 0.9rem;
+}
+
+.results h2 {
+  margin-top: 0;
+}
+
+#map {
+  height: 100vh;
+  width: 100%;
+}
+
+.badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.78rem;
+  margin-right: 0.35rem;
+  margin-bottom: 0.4rem;
+}
+
+.badge.green {
+  background: var(--accent-soft);
+  color: #1e5d33;
+}
+
+.badge.warn {
+  background: #f3e9be;
+  color: var(--warn);
+}
+
+@media (max-width: 980px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 60vh;
+  }
+
+  .panel {
+    border-right: none;
+    border-bottom: 1px solid #ded5c6;
+  }
+
+  #map {
+    height: 60vh;
+  }
+
+  .location-row {
+    grid-template-columns: 1fr;
+  }
+}

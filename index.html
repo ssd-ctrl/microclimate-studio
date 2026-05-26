@@ -1,0 +1,80 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#3c8456" />
+    <title>Microclimate + Landscape Generator</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="panel">
+        <h1>Microclimate Studio</h1>
+        <p class="subhead">Generate climate-aware planting, hardscape, and drainage concepts.</p>
+
+        <form id="site-form">
+          <label for="site-name">Site Name</label>
+          <input id="site-name" type="text" placeholder="Austin Civic Plaza" />
+
+          <label for="location-query">Site Location (Address or Place)</label>
+          <div class="row location-row">
+            <input id="location-query" type="text" placeholder="Zilker Park, Austin TX" />
+            <button type="button" id="find-location">Find Location</button>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="latitude">Latitude</label>
+              <input id="latitude" type="number" step="0.0001" value="30.2672" required />
+            </div>
+            <div>
+              <label for="longitude">Longitude</label>
+              <input id="longitude" type="number" step="0.0001" value="-97.7431" required />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="site-area">Site Area (m2)</label>
+              <input id="site-area" type="number" min="100" value="2500" required />
+            </div>
+            <div>
+              <label for="slope">Avg Slope (%)</label>
+              <input id="slope" type="number" min="0" max="100" value="3" required />
+            </div>
+          </div>
+
+          <label for="boundary-geojson">Boundary GeoJSON (Polygon, optional)</label>
+          <textarea id="boundary-geojson" rows="5" placeholder='{"type":"Polygon","coordinates":[[[-97.744,30.267],[-97.742,30.267],[-97.742,30.266],[-97.744,30.266],[-97.744,30.267]]]} or use "Capture Boundary"'></textarea>
+
+          <div class="row">
+            <button type="button" id="capture-boundary">Capture Boundary</button>
+            <button type="button" id="clear-boundary">Clear Boundary</button>
+          </div>
+
+          <button type="submit">Generate Layout</button>
+        </form>
+
+        <div class="row export-row">
+          <button type="button" id="export-json">Export JSON</button>
+          <button type="button" id="export-report">Export Report</button>
+        </div>
+
+        <section class="results" id="results">
+          <h2>Results</h2>
+          <p>Submit a site to generate layout recommendations.</p>
+        </section>
+      </aside>
+
+      <main>
+        <div id="map"></div>
+      </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

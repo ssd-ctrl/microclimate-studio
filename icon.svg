@@ -1,0 +1,11 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Microclimate Studio icon">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2f6f47"/>
+      <stop offset="100%" stop-color="#5ba477"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="48" fill="#f3f0e8"/>
+  <path d="M38 168c34-6 52-34 90-34 36 0 50 18 90 14v58H38z" fill="#8fbfa0"/>
+  <path d="M132 44c-30 0-54 24-54 54 0 38 54 98 54 98s54-60 54-98c0-30-24-54-54-54zm0 74c-11 0-20-9-20-20s9-20 20-20 20 9 20 20-9 20-20 20z" fill="url(#g)"/>
+</svg>
