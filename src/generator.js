@@ -29,10 +29,6 @@ function normalizeVector([x, y]) {
   return [x / length, y / length];
 }
 
-function buildRingPolygon(outer, inner) {
-  return [...outer, ...[...inner].reverse()];
-}
-
 function slopeDirectionVector(latitude, longitude) {
   const seedA = Math.sin(latitude * 8.3 + longitude * 5.1);
   const seedB = Math.cos(latitude * 4.4 - longitude * 6.2);
@@ -78,8 +74,8 @@ function createBoundaryZones(boundary, site, vegetatedPct, hardscapePct) {
 
   return {
     zones: [
-      { kind: "vegetation", polygon: buildRingPolygon(boundary, hardscapeBoundary), color: "#4f9f6e" },
-      { kind: "hardscape", polygon: buildRingPolygon(hardscapeBoundary, drainageBoundary), color: "#8f8a77" },
+      { kind: "vegetation", polygon: boundary, color: "#4f9f6e" },
+      { kind: "hardscape", polygon: hardscapeBoundary, color: "#8f8a77" },
       { kind: "drainage", polygon: drainageBoundary, color: "#4e7da8" }
     ],
     flowLines: createFlowLinesForBoundary(boundary, drainageBoundary, downslope, slopeFactor),
