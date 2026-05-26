@@ -1,6 +1,6 @@
 ﻿import { getEnvironmentalProfile } from "./environment.js";
 import { generateLayout } from "./generator.js";
-import { closeThreeDView, openThreeDView, setSunHour } from "./three-view.js";
+import { closeThreeDView, openThreeDView, setNavigationMode, setSunHour, toggleSunPlayback } from "./three-view.js";
 
 const osmLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 20,
@@ -42,6 +42,8 @@ const exportReportButton = document.getElementById("export-report");
 const close3DButton = document.getElementById("close-3d");
 const threeDModal = document.getElementById("three-d-modal");
 const sunHourInput = document.getElementById("sun-hour");
+const navModeInput = document.getElementById("nav-mode");
+const playSunButton = document.getElementById("play-sun");
 
 let boundaryPoints = [];
 let captureMode = false;
@@ -344,9 +346,15 @@ ${layout.recommendations.map((item) => `- ${item}`).join("\n")}
 close3DButton.addEventListener("click", () => {
   closeThreeDView();
   threeDModal.classList.add("hidden");
+  playSunButton.textContent = "Play Sun";
 });
 
 sunHourInput.addEventListener("input", (event) => setSunHour(event.target.value));
+navModeInput.addEventListener("change", (event) => setNavigationMode(event.target.value));
+playSunButton.addEventListener("click", () => {
+  const playing = toggleSunPlayback();
+  playSunButton.textContent = playing ? "Pause Sun" : "Play Sun";
+});
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
