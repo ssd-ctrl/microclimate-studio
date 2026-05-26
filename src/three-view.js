@@ -1,5 +1,5 @@
-﻿const THREE_JS = "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js";
-const ORBIT_JS = "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/controls/OrbitControls.js?module";
+﻿const THREE_JS = "https://esm.sh/three@0.166.1";
+const ORBIT_JS = "https://esm.sh/three@0.166.1/examples/jsm/controls/OrbitControls.js";
 
 let renderer;
 let scene;
@@ -68,6 +68,10 @@ function updateSunPosition(hour) {
     Math.sin(azimuth) * radius
   );
   sunLight.intensity = 0.35 + elevation * 0.85;
+}
+
+export function setSunHour(hour) {
+  updateSunPosition(Number(hour));
 }
 
 export async function openThreeDView({ site, layout }) {

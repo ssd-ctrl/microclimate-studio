@@ -104,7 +104,7 @@ button:disabled {
 
 .export-row {
   margin-top: 0.75rem;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
 }
 
 .results {
@@ -117,6 +117,26 @@ button:disabled {
 
 .results h2 {
   margin-top: 0;
+}
+
+.result-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.7rem;
+}
+
+.tab-btn {
+  border: 1px solid #c8bfaf;
+  background: #f7f2e8;
+  color: #2c342d;
+  border-radius: 0.45rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.82rem;
+}
+
+.tab-btn.active {
+  background: var(--accent-soft);
+  border-color: #8ebf9f;
 }
 
 #map {

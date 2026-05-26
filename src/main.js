@@ -1,6 +1,6 @@
 ﻿import { getEnvironmentalProfile } from "./environment.js";
 import { generateLayout } from "./generator.js";
-import { closeThreeDView, openThreeDView } from "./three-view.js";
+import { closeThreeDView, openThreeDView, setSunHour } from "./three-view.js";
 
 const map = L.map("map").setView([30.2672, -97.7431], 13);
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -24,13 +24,14 @@ const captureButton = document.getElementById("capture-boundary");
 const clearBoundaryButton = document.getElementById("clear-boundary");
 const exportJsonButton = document.getElementById("export-json");
 const exportReportButton = document.getElementById("export-report");
-const open3DButton = document.getElementById("open-3d");
 const close3DButton = document.getElementById("close-3d");
 const threeDModal = document.getElementById("three-d-modal");
+const sunHourInput = document.getElementById("sun-hour");
 
 let boundaryPoints = [];
 let captureMode = false;
 let currentRun = null;
+let activeResultTab = "layout";
 
 async function geocodeLocation(query) {
   const url = new URL("https://nominatim.openstreetmap.org/search");
@@ -111,19 +112,48 @@ function zoomToSite(site) {
   map.setView([site.latitude, site.longitude], 16);
 }
 
+async function open3DFromCurrentRun() {
+  if (!currentRun) {
+    return;
+  }
+  threeDModal.classList.remove("hidden");
+  try {
+    await openThreeDView(currentRun);
+  } catch (error) {
+    const canvasHost = document.getElementById("three-d-canvas");
+    canvasHost.innerHTML = `<div style="padding:1rem;color:#fff;">3D load failed: ${error.message}</div>`;
+  }
+}
+
 function renderResults(site, env, layout) {
   const sourceBadges = (env.sources || ["unknown-source"]).map(
     (source) => `<span class="badge green">${source}</span>`
   );
 
-  results.innerHTML = `
-    <h2>${site.siteName || "Generated Site Concept"}</h2>
-    <div>
-      <span class="badge green">${env.hardinessZone}</span>
-      <span class="badge green">${env.soil.type}</span>
-      <span class="badge warn">${env.rainfall.annualMM} mm/yr rain</span>
-    </div>
-    <div>${sourceBadges.join("")}</div>
+  const climateDetails = [
+    `Hardiness Zone: ${env.hardinessZone}`,
+    `Soil Type: ${env.soil.type} (${env.soil.drainageClass})`,
+    `Rainfall: ${env.rainfall.annualMM} mm/year (${env.rainfall.stormIntensity})`,
+    `Sun Band: ${env.sun.exposureBand}`,
+    `Avg Sun Hours: ${env.sun.summerSolarGainHours ?? "n/a"}`,
+    `Data Sources: ${(env.sources || []).join(", ")}`
+  ];
+
+  const tabContent =
+    activeResultTab === "sun"
+      ? `
+    <p><strong>Sun Study</strong></p>
+    <p>Open the 3D walkthrough and move Sun Hour to inspect shadow behavior through the day.</p>
+    <button type="button" id="open-3d-inline">Open 3D Walkthrough</button>
+  `
+      : activeResultTab === "climate"
+        ? `
+    <p><strong>Detailed Climate Profile</strong></p>
+    <ul>
+      ${climateDetails.map((item) => `<li>${item}</li>`).join("")}
+    </ul>
+  `
+        : `
     <p>${env.sun.designHint}</p>
     <p><strong>Program Areas:</strong></p>
     <p>Vegetation: ${layout.metrics.vegetatedAreaM2} m2</p>
@@ -134,6 +164,36 @@ function renderResults(site, env, layout) {
       ${layout.recommendations.map((r) => `<li>${r}</li>`).join("")}
     </ul>
   `;
+
+  results.innerHTML = `
+    <h2>${site.siteName || "Generated Site Concept"}</h2>
+    <div class="result-tabs">
+      <button type="button" class="tab-btn ${activeResultTab === "layout" ? "active" : ""}" data-tab="layout">Layout</button>
+      <button type="button" class="tab-btn ${activeResultTab === "sun" ? "active" : ""}" data-tab="sun">Sun Study</button>
+      <button type="button" class="tab-btn ${activeResultTab === "climate" ? "active" : ""}" data-tab="climate">Climate</button>
+    </div>
+    <div>
+      <span class="badge green">${env.hardinessZone}</span>
+      <span class="badge green">${env.soil.type}</span>
+      <span class="badge warn">${env.rainfall.annualMM} mm/yr rain</span>
+    </div>
+    <div>${sourceBadges.join("")}</div>
+    ${tabContent}
+  `;
+
+  results.querySelectorAll("[data-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeResultTab = button.dataset.tab;
+      renderResults(site, env, layout);
+    });
+  });
+
+  const open3DInline = document.getElementById("open-3d-inline");
+  if (open3DInline) {
+    open3DInline.addEventListener("click", () => {
+      open3DFromCurrentRun();
+    });
+  }
 }
 
 function renderZones(layout) {
@@ -313,23 +373,13 @@ ${layout.recommendations.map((item) => `- ${item}`).join("\n")}
   createDownload(`microclimate-report-${Date.now()}.txt`, report, "text/plain");
 });
 
-open3DButton.addEventListener("click", async () => {
-  if (!currentRun) {
-    results.innerHTML = "<h2>Results</h2><p>Generate a concept first, then open 3D walkthrough.</p>";
-    return;
-  }
-  threeDModal.classList.remove("hidden");
-  try {
-    await openThreeDView(currentRun);
-  } catch (error) {
-    const canvasHost = document.getElementById("three-d-canvas");
-    canvasHost.innerHTML = `<div style="padding:1rem;color:#fff;">3D load failed: ${error.message}</div>`;
-  }
-});
-
 close3DButton.addEventListener("click", () => {
   closeThreeDView();
   threeDModal.classList.add("hidden");
+});
+
+sunHourInput.addEventListener("input", (event) => {
+  setSunHour(event.target.value);
 });
 
 form.addEventListener("submit", async (event) => {
@@ -357,10 +407,10 @@ form.addEventListener("submit", async (event) => {
     siteMarker.setLatLng([site.latitude, site.longitude]);
     zoomToSite(site);
 
+    currentRun = { site, env, layout };
+    activeResultTab = "layout";
     renderResults(site, env, layout);
     renderZones(layout);
-
-    currentRun = { site, env, layout };
   } catch (error) {
     results.innerHTML = `<h2>Results</h2><p>Generation failed: ${error.message}</p>`;
   } finally {
