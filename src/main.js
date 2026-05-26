@@ -354,18 +354,28 @@ ${layout.recommendations.map((item) => `- ${item}`).join("\n")}
   createDownload(`microclimate-report-${Date.now()}.txt`, report, "text/plain");
 });
 
-close3DButton.addEventListener("click", () => {
-  closeThreeDView();
-  threeDModal.classList.add("hidden");
-  playSunButton.textContent = "Play Sun";
-});
+if (close3DButton && threeDModal) {
+  close3DButton.addEventListener("click", () => {
+    closeThreeDView();
+    threeDModal.classList.add("hidden");
+    if (playSunButton) {
+      playSunButton.textContent = "Play Sun";
+    }
+  });
+}
 
-sunHourInput.addEventListener("input", (event) => setSunHour(event.target.value));
-navModeInput.addEventListener("change", (event) => setNavigationMode(event.target.value));
-playSunButton.addEventListener("click", () => {
-  const playing = toggleSunPlayback();
-  playSunButton.textContent = playing ? "Pause Sun" : "Play Sun";
-});
+if (sunHourInput) {
+  sunHourInput.addEventListener("input", (event) => setSunHour(event.target.value));
+}
+if (navModeInput) {
+  navModeInput.addEventListener("change", (event) => setNavigationMode(event.target.value));
+}
+if (playSunButton) {
+  playSunButton.addEventListener("click", () => {
+    const playing = toggleSunPlayback();
+    playSunButton.textContent = playing ? "Pause Sun" : "Play Sun";
+  });
+}
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
