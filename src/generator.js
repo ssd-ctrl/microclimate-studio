@@ -2,11 +2,16 @@
   return Math.sqrt(siteAreaM2 / Math.PI);
 }
 
+function metersToLatDegrees(meters) {
+  return meters / 110540;
+}
+
+function metersToLngDegrees(meters, latitude) {
+  return meters / (111320 * Math.cos((latitude * Math.PI) / 180));
+}
+
 function centroid(latlngs) {
-  const totals = latlngs.reduce(
-    (acc, [lat, lng]) => ({ lat: acc.lat + lat, lng: acc.lng + lng }),
-    { lat: 0, lng: 0 }
-  );
+  const totals = latlngs.reduce((acc, [lat, lng]) => ({ lat: acc.lat + lat, lng: acc.lng + lng }), { lat: 0, lng: 0 });
   return [totals.lat / latlngs.length, totals.lng / latlngs.length];
 }
 
@@ -34,47 +39,34 @@ function slopeDirectionVector(latitude, longitude) {
   return normalizeVector([seedA, seedB]);
 }
 
+function createDefaultBoundary(site) {
+  const radiusM = Math.max(18, areaRadiusMeters(site.siteAreaM2));
+  const points = [];
+  for (let i = 0; i < 10; i += 1) {
+    const t = (Math.PI * 2 * i) / 10;
+    const lat = site.latitude + metersToLatDegrees(Math.sin(t) * radiusM * 1.15);
+    const lng = site.longitude + metersToLngDegrees(Math.cos(t) * radiusM, site.latitude);
+    points.push([lat, lng]);
+  }
+  return points;
+}
+
 function createFlowLinesForBoundary(boundary, drainageBoundary, downslope, slopeFactor) {
   const [dLat, dLng] = downslope;
   const length = 0.00045 * slopeFactor;
   return boundary.map(([lat, lng], index) => {
-    const end =
-      index < drainageBoundary.length ? drainageBoundary[index] : [lat + dLat * length, lng + dLng * length];
-    return {
-      path: [[lat, lng], end],
-      strength: slopeFactor
-    };
+    const end = index < drainageBoundary.length ? drainageBoundary[index] : [lat + dLat * length, lng + dLng * length];
+    return { path: [[lat, lng], end], strength: slopeFactor };
   });
 }
 
-function createFlowLinesForRadial(site, slopeFactor) {
-  const downslope = slopeDirectionVector(site.latitude, site.longitude);
-  const [dLat, dLng] = downslope;
-  const start = [site.latitude - dLat * 0.00035, site.longitude - dLng * 0.00035];
-  const middle = [site.latitude, site.longitude];
-  const end = [site.latitude + dLat * 0.00045 * slopeFactor, site.longitude + dLng * 0.00045 * slopeFactor];
-  return [
-    { path: [start, middle, end], strength: slopeFactor },
-    {
-      path: [
-        [start[0] + 0.00018, start[1] - 0.00012],
-        [middle[0] + 0.0001, middle[1] - 0.00008],
-        [end[0] + 0.00008, end[1] - 0.00006]
-      ],
-      strength: slopeFactor
-    }
-  ];
-}
-
-function createBoundaryZones(site, vegetatedPct, hardscapePct, drainagePct) {
+function createBoundaryZones(boundary, site, vegetatedPct, hardscapePct) {
   const slopeFactor = site.slopePercent > 6 ? 1.25 : site.slopePercent > 2 ? 1 : 0.85;
-
-  const outer = site.boundary;
   const hardscapeInnerFactor = Math.max(0.38, 1 - vegetatedPct * 0.95);
   const drainageInnerFactor = Math.max(0.18, hardscapeInnerFactor - hardscapePct * 0.75);
 
-  const hardscapeBoundary = scalePolygon(outer, hardscapeInnerFactor);
-  const drainageBoundaryBase = scalePolygon(outer, drainageInnerFactor);
+  const hardscapeBoundary = scalePolygon(boundary, hardscapeInnerFactor);
+  const drainageBoundaryBase = scalePolygon(boundary, drainageInnerFactor);
 
   const downslope = slopeDirectionVector(site.latitude, site.longitude);
   const shiftMagnitude = 0.00022 * slopeFactor;
@@ -86,11 +78,11 @@ function createBoundaryZones(site, vegetatedPct, hardscapePct, drainagePct) {
 
   return {
     zones: [
-      { kind: "vegetation", polygon: buildRingPolygon(outer, hardscapeBoundary), color: "#4f9f6e" },
+      { kind: "vegetation", polygon: buildRingPolygon(boundary, hardscapeBoundary), color: "#4f9f6e" },
       { kind: "hardscape", polygon: buildRingPolygon(hardscapeBoundary, drainageBoundary), color: "#8f8a77" },
       { kind: "drainage", polygon: drainageBoundary, color: "#4e7da8" }
     ],
-    flowLines: createFlowLinesForBoundary(outer, drainageBoundary, downslope, slopeFactor),
+    flowLines: createFlowLinesForBoundary(boundary, drainageBoundary, downslope, slopeFactor),
     drainageNote: `Drainage core shifted downslope (vector ${downslope[0].toFixed(2)}, ${downslope[1].toFixed(2)}).`
   };
 }
@@ -108,67 +100,44 @@ function buildPlantSuggestions(site, env, zones) {
   const vegZone = zones.find((z) => z.kind === "vegetation");
   const points = [];
 
-  if (vegZone?.polygon && vegZone.polygon.length > 6) {
-    for (let i = 0; i < vegZone.polygon.length; i += Math.ceil(vegZone.polygon.length / 6)) {
-      points.push(vegZone.polygon[i]);
+  if (vegZone?.polygon && vegZone.polygon.length > 8) {
+    const step = Math.max(1, Math.floor(vegZone.polygon.length / 18));
+    for (let i = 0; i < vegZone.polygon.length; i += step) {
+      const [lat, lng] = vegZone.polygon[i];
+      points.push([lat + (i % 3) * 0.00001, lng - (i % 2) * 0.00001]);
+      if (points.length >= 18) {
+        break;
+      }
     }
-  } else if (vegZone?.center) {
-    points.push(vegZone.center, [vegZone.center[0] + 0.00025, vegZone.center[1] - 0.0002]);
   }
 
   if (!points.length) {
-    points.push([site.latitude + 0.0002, site.longitude - 0.0002]);
+    points.push([site.latitude + 0.0001, site.longitude - 0.0001]);
   }
 
   return points.map((point, index) => {
     const base = palette[index % palette.length];
     const drainageBias = env.soil.drainageClass.includes("slow") || env.rainfall.stormIntensity === "high";
     const suited = drainageBias ? base.waterNeed !== "low" : true;
-    return {
-      name: base.species,
-      type: base.type,
-      waterNeed: base.waterNeed,
-      suited,
-      coords: point
-    };
+    return { name: base.species, type: base.type, waterNeed: base.waterNeed, suited, coords: point };
   });
 }
 
 export function generateLayout(site, env) {
-  const radius = areaRadiusMeters(site.siteAreaM2);
   const rainfallFactor = env.rainfall.stormIntensity === "high" ? 1.25 : env.rainfall.stormIntensity === "moderate" ? 1 : 0.75;
-  const slopeFactor = site.slopePercent > 6 ? 1.25 : site.slopePercent > 2 ? 1 : 0.85;
-
   const vegetatedPct = Math.min(0.65, Math.max(0.35, 0.45 + (rainfallFactor - 1) * 0.12));
   const hardscapePct = Math.max(0.2, 0.42 - (vegetatedPct - 0.45));
   const drainagePct = Number((1 - vegetatedPct - hardscapePct).toFixed(2));
 
-  const offset = radius * 0.45;
-  const hasBoundary = Array.isArray(site.boundary) && site.boundary.length >= 3;
+  const userBoundary = Array.isArray(site.boundary) && site.boundary.length >= 3 ? site.boundary : null;
+  const siteBoundary = userBoundary || createDefaultBoundary(site);
 
-  let zones;
-  let flowLines;
-  let boundaryRecommendation;
-
-  if (hasBoundary) {
-    const boundaryModel = createBoundaryZones(site, vegetatedPct, hardscapePct, drainagePct);
-    zones = boundaryModel.zones;
-    flowLines = boundaryModel.flowLines;
-    boundaryRecommendation = `Parcel subdivision mode active. ${boundaryModel.drainageNote}`;
-  } else {
-    zones = [
-      { kind: "vegetation", center: [site.latitude + 0.0007, site.longitude - 0.0007], radius: offset, color: "#4f9f6e" },
-      { kind: "hardscape", center: [site.latitude - 0.0006, site.longitude + 0.0003], radius: offset * 0.8, color: "#8f8a77" },
-      { kind: "drainage", center: [site.latitude + 0.0003, site.longitude + 0.0007], radius: offset * 0.55 * slopeFactor, color: "#4e7da8" }
-    ];
-    flowLines = createFlowLinesForRadial(site, slopeFactor);
-    boundaryRecommendation = "No boundary provided; zoning generated from radial site model.";
-  }
-
-  const plantSuggestions = buildPlantSuggestions(site, env, zones);
+  const boundaryModel = createBoundaryZones(siteBoundary, site, vegetatedPct, hardscapePct);
+  const plantSuggestions = buildPlantSuggestions(site, env, boundaryModel.zones);
 
   return {
     generatedAt: new Date().toISOString(),
+    siteBoundary,
     metrics: {
       vegetatedAreaM2: Math.round(site.siteAreaM2 * vegetatedPct),
       hardscapeAreaM2: Math.round(site.siteAreaM2 * hardscapePct),
@@ -178,10 +147,10 @@ export function generateLayout(site, env) {
       `${env.hardinessZone} planting palette tuned for ${env.sun.exposureBand} sun exposure`,
       `${env.soil.type} soil suggests ${env.soil.drainageClass} substrate strategy`,
       `${env.rainfall.annualMM}mm annual rainfall supports stormwater retention + overflow plan`,
-      boundaryRecommendation
+      userBoundary ? `Parcel subdivision mode active. ${boundaryModel.drainageNote}` : `Auto parcel boundary generated from site area. ${boundaryModel.drainageNote}`
     ],
-    zones,
-    flowLines,
+    zones: boundaryModel.zones,
+    flowLines: boundaryModel.flowLines,
     plantSuggestions
   };
 }

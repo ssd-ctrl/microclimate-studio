@@ -369,8 +369,10 @@ form.addEventListener("submit", async (event) => {
 
     const env = await getEnvironmentalProfile(site);
     const layout = generateLayout(site, env);
+    site.boundary = layout.siteBoundary;
 
     siteMarker.setLatLng([site.latitude, site.longitude]);
+    drawBoundary(site.boundary);
     zoomToSite(site);
     renderZones(layout);
     renderPlantSuggestions(layout);
