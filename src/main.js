@@ -1,5 +1,6 @@
 ﻿import { getEnvironmentalProfile } from "./environment.js";
 import { generateLayout } from "./generator.js";
+import { closeThreeDView, openThreeDView } from "./three-view.js";
 
 const map = L.map("map").setView([30.2672, -97.7431], 13);
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -23,6 +24,9 @@ const captureButton = document.getElementById("capture-boundary");
 const clearBoundaryButton = document.getElementById("clear-boundary");
 const exportJsonButton = document.getElementById("export-json");
 const exportReportButton = document.getElementById("export-report");
+const open3DButton = document.getElementById("open-3d");
+const close3DButton = document.getElementById("close-3d");
+const threeDModal = document.getElementById("three-d-modal");
 
 let boundaryPoints = [];
 let captureMode = false;
@@ -99,6 +103,14 @@ function drawBoundary(latlngs) {
   }).addTo(boundaryLayer);
 }
 
+function zoomToSite(site) {
+  if (site.boundary && site.boundary.length >= 3) {
+    map.fitBounds(site.boundary, { padding: [40, 40] });
+    return;
+  }
+  map.setView([site.latitude, site.longitude], 16);
+}
+
 function renderResults(site, env, layout) {
   const sourceBadges = (env.sources || ["unknown-source"]).map(
     (source) => `<span class="badge green">${source}</span>`
@@ -150,6 +162,42 @@ function renderZones(layout) {
       .bindPopup(zone.kind)
       .addTo(zoneLayer);
   });
+
+  (layout.flowLines || []).forEach((flow) => {
+    const stroke = L.polyline(flow.path, {
+      color: "#245a87",
+      weight: Math.max(2, Math.min(4, flow.strength * 2.6)),
+      opacity: 0.9,
+      dashArray: "6 6"
+    }).addTo(zoneLayer);
+
+    const end = flow.path[flow.path.length - 1];
+    const prev = flow.path[flow.path.length - 2] || flow.path[0];
+    const dLat = end[0] - prev[0];
+    const dLng = end[1] - prev[1];
+    const length = Math.hypot(dLat, dLng) || 1;
+    const unitLat = dLat / length;
+    const unitLng = dLng / length;
+    const wingScale = 0.00006;
+
+    const left = [
+      end[0] - unitLat * wingScale + unitLng * wingScale * 0.75,
+      end[1] - unitLng * wingScale - unitLat * wingScale * 0.75
+    ];
+    const right = [
+      end[0] - unitLat * wingScale - unitLng * wingScale * 0.75,
+      end[1] - unitLng * wingScale + unitLat * wingScale * 0.75
+    ];
+
+    L.polygon([left, end, right], {
+      color: "#245a87",
+      fillColor: "#245a87",
+      fillOpacity: 0.95,
+      weight: 1
+    }).addTo(zoneLayer);
+
+    stroke.bindPopup("drainage flow");
+  });
 }
 
 function setGeneratingState(isGenerating) {
@@ -195,7 +243,7 @@ findLocationButton.addEventListener("click", async () => {
     latitudeInput.value = match.latitude.toFixed(6);
     longitudeInput.value = match.longitude.toFixed(6);
     siteMarker.setLatLng([match.latitude, match.longitude]);
-    map.setView([match.latitude, match.longitude], 14);
+    map.setView([match.latitude, match.longitude], 16);
     results.innerHTML = `<h2>Results</h2><p>Found: ${match.label}</p>`;
   } catch (error) {
     results.innerHTML = `<h2>Results</h2><p>Location search failed: ${error.message}</p>`;
@@ -265,6 +313,25 @@ ${layout.recommendations.map((item) => `- ${item}`).join("\n")}
   createDownload(`microclimate-report-${Date.now()}.txt`, report, "text/plain");
 });
 
+open3DButton.addEventListener("click", async () => {
+  if (!currentRun) {
+    results.innerHTML = "<h2>Results</h2><p>Generate a concept first, then open 3D walkthrough.</p>";
+    return;
+  }
+  threeDModal.classList.remove("hidden");
+  try {
+    await openThreeDView(currentRun);
+  } catch (error) {
+    const canvasHost = document.getElementById("three-d-canvas");
+    canvasHost.innerHTML = `<div style="padding:1rem;color:#fff;">3D load failed: ${error.message}</div>`;
+  }
+});
+
+close3DButton.addEventListener("click", () => {
+  closeThreeDView();
+  threeDModal.classList.add("hidden");
+});
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -288,7 +355,7 @@ form.addEventListener("submit", async (event) => {
     const layout = generateLayout(site, env);
 
     siteMarker.setLatLng([site.latitude, site.longitude]);
-    map.setView([site.latitude, site.longitude], 14);
+    zoomToSite(site);
 
     renderResults(site, env, layout);
     renderZones(layout);

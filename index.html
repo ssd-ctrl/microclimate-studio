@@ -59,6 +59,7 @@
         </form>
 
         <div class="row export-row">
+          <button type="button" id="open-3d">3D Walkthrough</button>
           <button type="button" id="export-json">Export JSON</button>
           <button type="button" id="export-report">Export Report</button>
         </div>
@@ -73,6 +74,17 @@
         <div id="map"></div>
       </main>
     </div>
+    <section id="three-d-modal" class="three-d-modal hidden">
+      <div class="three-d-header">
+        <h2>3D Site Walkthrough</h2>
+        <label class="sun-study">
+          Sun Hour
+          <input id="sun-hour" type="range" min="6" max="19" step="1" value="12" />
+        </label>
+        <button type="button" id="close-3d">Close</button>
+      </div>
+      <div id="three-d-canvas"></div>
+    </section>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script type="module" src="./src/main.js"></script>

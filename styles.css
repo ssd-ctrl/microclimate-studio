@@ -104,6 +104,7 @@ button:disabled {
 
 .export-row {
   margin-top: 0.75rem;
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .results {
@@ -142,6 +143,45 @@ button:disabled {
   color: var(--warn);
 }
 
+.three-d-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 22, 18, 0.88);
+  z-index: 1200;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.three-d-modal.hidden {
+  display: none;
+}
+
+.three-d-header {
+  display: flex;
+  gap: 0.8rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.7rem 1rem;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.sun-study {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.86rem;
+}
+
+.sun-study input {
+  width: 160px;
+}
+
+#three-d-canvas {
+  width: 100%;
+  height: calc(100vh - 58px);
+}
+
 @media (max-width: 980px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -158,6 +198,10 @@ button:disabled {
   }
 
   .location-row {
+    grid-template-columns: 1fr;
+  }
+
+  .export-row {
     grid-template-columns: 1fr;
   }
 }

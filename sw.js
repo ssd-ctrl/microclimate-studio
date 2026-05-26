@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "microclimate-studio-v1";
+﻿const CACHE_NAME = "microclimate-studio-v2";
 const APP_ASSETS = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const APP_ASSETS = [
   "./src/main.js",
   "./src/environment.js",
   "./src/generator.js",
+  "./src/three-view.js",
   "./manifest.webmanifest",
   "./icon.svg"
 ];
@@ -23,12 +24,35 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") {
+    return;
+  }
+
+  const requestUrl = new URL(event.request.url);
+  const isSameOrigin = requestUrl.origin === self.location.origin;
+
   event.respondWith(
-    caches.match(event.request).then((cached) => {
+    (async () => {
+      if (isSameOrigin) {
+        try {
+          const networkResponse = await fetch(event.request);
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        } catch (_error) {
+          const cached = await caches.match(event.request);
+          if (cached) {
+            return cached;
+          }
+          throw _error;
+        }
+      }
+
+      const cached = await caches.match(event.request);
       if (cached) {
         return cached;
       }
       return fetch(event.request);
-    })
+    })()
   );
 });
